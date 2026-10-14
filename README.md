@@ -402,6 +402,31 @@ ayt.removeChar( );  // -> '070 712 34 5'
 ayt.addChar( '7' ); // -> '070 712 34 57'
 ```
 
+
+## Packing a tarball without publishing
+
+`npm run pack` produces the same tarball `npm publish` would upload, without publishing anything. It is used to hand a build (e.g. a newer libphonenumber) to downstream projects before an official release.
+
+```sh
+yarn install --immutable
+npm run pack                     # writes to ./dist
+PACK_DESTINATION=/some/dir npm run pack
+PACK_VERSION=7.9.0-mytag.1 npm run pack
+```
+
+`scripts/pack.sh`:
+
+ - exports the committed revision (`PACK_SOURCE_REF`, default `HEAD`; uncommitted changes are *not* packed) into a clean staging directory named `awesome-phonenumber` (rollup derives identifiers in `index-esm.mjs` from it)
+ - runs `yarn install --immutable`, `yarn build` (libphonenumber at the tag pinned in `libphonenumber.version`) and `yarn test`, like the release workflow
+ - sets the version (default `7.9.0-tlouisse.libphonenumber-<libphonenumber version>`: the next minor after the latest release, 7.8.0, marked as a fork prerelease) and runs `npm pack`, which runs the same `prepack`/`prepare`/`postpack` lifecycle as `npm publish`
+ - runs `npm publish --dry-run` and checks that its file list and integrity match the tarball
+ - writes `<tarball>.sha256` and `<tarball-name>.provenance.json` (source commit, libphonenumber version, sizes, file list)
+ - runs `scripts/verify-pack.mjs` (also available as `npm run pack:verify -- <tarball>`), which checks the payload and metadata, installs the tarball into a scratch project and verifies CommonJS `require`, ESM `import` and the TypeScript types
+
+The tarball contains `lib/`, `index.js`, `index-esm.mjs`, `index.d.ts`, `package.json`, `README.md` and the license files: `LICENSE` (this package), `LICENSE.libphonenumber` and `LICENSE.closure-library` (Apache-2.0, for the Google libphonenumber and Closure Library code compiled into `lib/index.js`).
+
+The [Pack workflow](.github/workflows/pack.yml) runs the same script on pushes to its configured branches (or manually via `workflow_dispatch`, with an optional version) and uploads the tarball, checksum and provenance as the `awesome-phonenumber-tarball` artifact.
+
 [npm-image]: https://img.shields.io/npm/v/awesome-phonenumber.svg
 [npm-url]: https://npmjs.org/package/awesome-phonenumber
 [downloads-image]: https://img.shields.io/npm/dm/awesome-phonenumber.svg

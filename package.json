@@ -35,7 +35,9 @@
     "test-dist-cjs": "yarn --cwd cjs-test build-test",
     "test-dist": "yarn test-dist-webpack && yarn test-dist-esm && yarn test-dist-cjs",
     "cz": "git-cz",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "pack": "scripts/pack.sh",
+    "pack:verify": "node scripts/verify-pack.mjs"
   },
   "pre-commit": [
     "test"
@@ -49,7 +51,9 @@
     "lib",
     "index.js",
     "index-esm.mjs",
-    "index.d.ts"
+    "index.d.ts",
+    "LICENSE.libphonenumber",
+    "LICENSE.closure-library"
   ],
   "keywords": [
     "libphonenumber",

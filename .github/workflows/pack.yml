@@ -1,0 +1,62 @@
+name: Pack
+
+# Builds a publish-equivalent npm tarball (scripts/pack.sh) and uploads it as
+# a workflow artifact. Nothing is published to npm and no release is created.
+
+on:
+  push:
+    branches:
+      - hu84jr-ing-phone-package-workflow
+      - 'pack/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the packed package.json (empty = scripts/pack.sh default)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    name: Pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pack and verify
+        run: npm run pack
+        env:
+          CI: true
+          PACK_VERSION: ${{ inputs.version }}
+          PACK_DESTINATION: ${{ runner.temp }}/pack
+      - name: Summary
+        run: |
+          cd "$RUNNER_TEMP/pack"
+          {
+            echo '### awesome-phonenumber tarball'
+            echo '```json'
+            cat *.provenance.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: awesome-phonenumber-tarball
+          path: |
+            ${{ runner.temp }}/pack/*.tgz
+            ${{ runner.temp }}/pack/*.tgz.sha256
+            ${{ runner.temp }}/pack/*.provenance.json
+            ${{ runner.temp }}/pack/pack.json
+            ${{ runner.temp }}/pack/publish-dry-run.json
+          if-no-files-found: error
+          retention-days: 30
